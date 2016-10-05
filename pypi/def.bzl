@@ -29,21 +29,6 @@ def _is_archive(path):
       return True
   return False
 
-def _source_download_action(ctx, pip, spec):
-  src = ctx.path('src')
-  result = ctx.execute([
-      ctx.path(pip), "download",
-      "--isolated", "--no-deps",
-      "--no-binary", ":all:",
-      "-d", src,
-      spec])
-  if result.return_code:
-    fail("Failed to fetch %s: %s\n%s " % (spec, result.stdout, result.stderr))
-  archives = [f for f in src.readdir() if _is_archive(f)]
-  if not archives:
-    fail("Cannot find any buildable source archive in %s" % src.readdir)
-  return "src/" + archives[0].basename
-
 _PURE_BUILD_FILE = """
 py_library(
     name = "library",
@@ -74,11 +59,6 @@ filegroup(
     srcs = [{archive}],
 )
 
-pypi_internal_wheel(
-    name = "package",
-    archive = ":source",
-)
-
 py_library(
     name = "library",
     srcs = glob(["lib/*/__init__.py"]),
@@ -90,8 +70,42 @@ py_library(
 )
 """
 
+def _source_download_action(ctx, pip_lib, pkg, version):
+  cmd = ["python", ctx.path(ctx.attr._locate_archive), pkg, version]
+  result = ctx.execute(cmd, 600, {"PYTHONPATH": str(pip_lib)})
+  if result.return_code:
+    fail("Failed to locate %s==%s: %s" % (pkg, version, result.stderr))
+  url = result.stdout.strip()
+  ctx.download_and_extract(url, ctx.path("src"), "", "", "%s-%s" % (pkg, version))
+
+
+def _source_build_action(ctx, pip_lib):
+  cmds = [
+      "cd src",
+      "python setup.py build_py -d ../site-packages --no-compile",
+      "python setup.py build_scripts -d ../site-packages",
+      "python setup.py install_headers -d ../site-packages",
+  ]
+  result = ctx.execute(["sh", "-c",  " && ".join(cmds)], 600, {
+      "PYTHONPATH": str(pip_lib)})
+  if result.return_code:
+    fail("Failed to install files from pacakge: %s" % result.stderr)
+
+
+def _generate_build_action(ctx, pip_lib, generate_build):
+  cmds = [
+      "python %s src/setup.py" % ctx.path(generate_build),
+  ]
+  result = ctx.execute(["sh", "-c",  " && ".join(cmds)], 600, {
+      "PYTHONPATH": str(pip_lib)})
+  if result.return_code:
+    fail("Failed to generate BUILD file from pacakge: %s" % result.stderr)
+  ctx.file("BUILD", result.stdout, False)
+
 def _pypi_repository_impl(ctx):
   pip = ctx.attr.pip
+  pip_lib = ctx.path(pip).dirname.get_child("site-packages")
+
   spec = "%s==%s" % (ctx.attr.pkg, ctx.attr.version)
   if ctx.attr.pure:
     _pypi_pure_repository_impl(ctx, pip, spec)
@@ -104,17 +118,12 @@ def _pypi_repository_impl(ctx):
          "srcs_version")
     # TODO(yugui) support building both versions depending on srcs_version
 
-  archive = _source_download_action(ctx, pip, spec)
-  build = _GENERIC_BUILD_FILE.format(
-      deps = repr(ctx.attr.deps),
-      srcs_version = repr(ctx.attr.srcs_version),
-      archive = repr(archive),
-  )
-
-  tpl = ctx.attr._init_template
-  for mod in ctx.attr.modules:
-    ctx.symlink(ctx.path(tpl), ctx.path("lib/%s/__init__.py" % mod))
-  ctx.file("BUILD", build, False)
+  _source_download_action(ctx, pip_lib, ctx.attr.pkg, ctx.attr.version)
+  _source_build_action(ctx, pip_lib)
+  _generate_build_action(ctx, pip_lib, ctx.attr._generate_build)
+  #tpl = ctx.attr._init_template
+  #for mod in ctx.attr.modules:
+  #  ctx.symlink(ctx.path(tpl), ctx.path("lib/%s/__init__.py" % mod))
 
 pypi_repository = repository_rule(
     _pypi_repository_impl,
@@ -134,6 +143,16 @@ pypi_repository = repository_rule(
 
         "_init_template": attr.label(
             default = Label("//pypi:__init__.py.tpl"),
+        ),
+        "_locate_archive": attr.label(
+            default = Label("//pypi/tools:locate_archive.py"),
+            allow_single_file = True,
+            cfg = "host",
+        ),
+        "_generate_build": attr.label(
+            default = Label("//pypi/tools:generate_build.py"),
+            allow_single_file = True,
+            cfg = "host",
         ),
         "pip": attr.label(
             default = Label("@python_pip_tools//:pip.py"),

@@ -30,9 +30,9 @@ run()
 """
 
 _PIP_BUILD_FILE = """
-py_binary(
-    name = "pip",
-    srcs = ["pip.py"],
+py_library(
+    name = "pip_lib",
+    srcs = glob(["site-packages/**/*.py"]),
     data = glob(
         include = ["site-packages/**/*"],
         exclude = [
@@ -42,6 +42,24 @@ py_binary(
             "site-packages/setuptools/*.tmpl",
         ],
     ),
+    imports = ["site-packages"],
+    srcs_version = "PY2AND3",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "pip",
+    srcs = ["pip.py"],
+    deps = [":pip_lib"],
+    # data = glob(
+    #     include = ["site-packages/**/*"],
+    #     exclude = [
+    #         # These file names are illegal as Bazel labels but they are not
+    #         # required by pip.
+    #         "site-packages/setuptools/command/launcher manifest.xml",
+    #         "site-packages/setuptools/*.tmpl",
+    #     ],
+    # ),
     srcs_version = "PY2AND3",
     visibility = ["//visibility:public"],
 )

@@ -20,6 +20,14 @@ pypi_repository(
     version = "1.11.1",
 )
 
+pypi_repository(
+    name = "org_python_pypi_pyyaml",
+    modules = ["pyyaml"],
+    pkg = "PyYAML",
+    srcs_version = "PY2ONLY",
+    version = "3.12",
+)
+
 local_repository(
     name = "com_github_gengo_rules_pypi",
     path = ".",
