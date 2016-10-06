@@ -77,8 +77,11 @@ py_library(
 )
 """
 
-def _source_download_action(ctx, pip_lib, pkg, version):
-  cmd = ["python", ctx.path(ctx.attr._locate_archive), pkg, version]
+def _archive_download_action(ctx, pip_lib, pkg, version, wheel=False):
+  cmd = ["python", ctx.path(ctx.attr._locate_archive)]
+  if wheel:
+    cmd += ["--wheel"]
+  cmd += [pkg, version]
   result = ctx.execute(cmd, 600, {"PYTHONPATH": str(pip_lib)})
   if result.return_code:
     fail("Failed to locate %s==%s: %s" % (pkg, version, result.stderr))
@@ -103,7 +106,7 @@ def _pypi_repository_impl(ctx):
          "srcs_version")
     # TODO(yugui) support building both versions depending on srcs_version
 
-  archive = _source_download_action(ctx, pip_lib, ctx.attr.pkg, ctx.attr.version)
+  archive = _archive_download_action(ctx, pip_lib, ctx.attr.pkg, ctx.attr.version)
   build = _GENERIC_BUILD_FILE.format(
       deps = repr(ctx.attr.deps),
       srcs_version = repr(ctx.attr.srcs_version),
@@ -137,6 +140,76 @@ pypi_repository = repository_rule(
             default = [],
         ),
 
+        "deps": attr.string_list(),
+        "srcs_version": attr.string(),
+
+        "_init_template": attr.label(
+            default = Label("//pypi:__init__.py.tpl"),
+        ),
+        "_locate_archive": attr.label(
+            default = Label("//pypi/tools:locate_archive.py"),
+            allow_single_file = True,
+            cfg = "host",
+        ),
+        "pip": attr.label(
+            default = Label("@python_pip_tools//:pip.py"),
+            allow_single_file = True,
+            executable = True,
+            cfg = "host",
+        ),
+    },
+)
+
+_WHEEL_BUILD_FILE = """
+filegroup(
+    name = "wheel",
+    srcs = ["package.whl"],
+)
+
+py_library(
+    name = "library",
+    srcs = glob(["lib/*/__init__.py"]),
+    data = [":wheel"],
+    imports = ["lib"],
+    visibility = ["//visibility:public"],
+    deps = {deps},
+    srcs_version = {srcs_version}
+)
+"""
+
+def _pypi_wheel_repository_impl(ctx):
+  pip = ctx.attr.pip
+  pip_lib = ctx.path(pip).dirname.get_child("site-packages")
+
+  spec = "%s==%s" % (ctx.attr.pkg, ctx.attr.version)
+  if ctx.attr.srcs_version not in ["PY2ONLY", "PY3"]:
+    fail("abi-depndent pacakge cannot support both of PY2 and PY3 by definition",
+         "srcs_version")
+    # TODO(yugui) support building both versions depending on srcs_version
+
+  archive = _archive_download_action(ctx, pip_lib, ctx.attr.pkg, ctx.attr.version,
+                                     wheel=True)
+  ctx.symlink(ctx.path(archive), ctx.path("package.whl"))
+  build = _WHEEL_BUILD_FILE.format(
+      deps = repr(ctx.attr.deps),
+      srcs_version = repr(ctx.attr.srcs_version),
+  )
+
+  tpl = ctx.attr._init_template
+  for mod in ctx.attr.modules:
+    ctx.symlink(ctx.path(tpl), ctx.path("lib/%s/__init__.py" % mod))
+  ctx.file("BUILD", build, False)
+
+pypi_wheel_repository = repository_rule(
+    _pypi_wheel_repository_impl,
+    attrs = {
+        "pkg": attr.string(
+            mandatory = True,
+        ),
+        "version": attr.string(
+            mandatory = True,
+        ),
+        "modules": attr.string_list(),
         "deps": attr.string_list(),
         "srcs_version": attr.string(),
 

@@ -1,6 +1,6 @@
 workspace(name = "com_github_gengo_rules_pypi")
 
-load("//pypi:def.bzl", "pypi_repositories", "pypi_repository")
+load("//pypi:def.bzl", "pypi_repositories", "pypi_repository", "pypi_wheel_repository")
 
 pypi_repositories()
 
@@ -23,6 +23,14 @@ pypi_repository(
     pkg = "numpy",
     srcs_version = "PY2ONLY",
     version = "1.11.1",
+)
+
+pypi_wheel_repository(
+    name = "org_python_pypi_msgpack",
+    modules = ["msgpack"],
+    pkg = "msgpack-python",
+    srcs_version = "PY2ONLY",
+    version = "0.4.7",
 )
 
 local_repository(
