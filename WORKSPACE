@@ -14,6 +14,11 @@ pypi_repository(
 
 pypi_repository(
     name = "org_python_pypi_numpy",
+    linkopts = [
+        "-B/usr/lib/gcc/x86_64-linux-gnu/4.8/",
+        "-B/usr/lib/gcc/x86_64-linux-gnu/4.7/",
+        "-B/usr/lib/gcc/x86_64-linux-gnu/4.6/",
+    ],
     modules = ["numpy"],
     pkg = "numpy",
     srcs_version = "PY2ONLY",

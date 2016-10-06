@@ -8,7 +8,6 @@ if sys.version_info[0] == 2:
     from urlparse import urlsplit
 else:
     from urllib.parse import urlsplit
-
 from pip.index import PackageFinder, FormatControl
 from pip.download import PipSession
 

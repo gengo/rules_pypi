@@ -62,6 +62,8 @@ filegroup(
 pypi_internal_wheel(
     name = "package",
     archive = ":source",
+    copts = {copts},
+    linkopts = {linkopts},
 )
 
 py_library(
@@ -82,7 +84,6 @@ def _source_download_action(ctx, pip_lib, pkg, version):
     fail("Failed to locate %s==%s: %s" % (pkg, version, result.stderr))
 
   url, fname = result.stdout.strip().split("\n")
-  ctx.download_and_extract(url, ctx.path("src"), "", "", "%s-%s" % (pkg, version))
   ctx.download(url, fname, "", False)
   return fname
 
@@ -107,6 +108,8 @@ def _pypi_repository_impl(ctx):
       deps = repr(ctx.attr.deps),
       srcs_version = repr(ctx.attr.srcs_version),
       archive = repr(archive),
+      copts = repr(ctx.attr.copts),
+      linkopts = repr(ctx.attr.linkopts),
   )
 
   tpl = ctx.attr._init_template
