@@ -5,13 +5,18 @@ import sys
 import tempfile
 import zipfile
 
-if sys.version_info[0] == 3:
+PY2 = sys.version_info[0] == 2
+
+if not PY2:
     from importlib import reload
 
 tempdir = tempfile.mkdtemp()
 atexit.register(lambda: os.remove(tempdir))
 
-wheel = os.path.join(os.path.dirname(__file__), "..", "..", "package.whl")
+fname = "py3.whl"
+if PY2:
+    fname = "py2.whl"
+wheel = os.path.join(os.path.dirname(__file__), "..", "..", fname)
 with zipfile.ZipFile(wheel) as z:
     z.extractall(tempdir)
 
