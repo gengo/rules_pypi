@@ -9,7 +9,7 @@ def _universal_install_action(ctx, python, pip, pkg, version):
   envs = ["CC", "CXX", "CPP", "LD", "AS"]
   cmd = ["env"] + ["%s=/dev/null" % e for e in envs]
   result = ctx.execute(cmd + [
-      ctx.path(pip), "install",
+      python, ctx.path(pip), "install",
       "--isolated", "--no-deps",
       "--root=%s" % ctx.path(''),
       "--ignore-installed",
