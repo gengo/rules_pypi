@@ -7,7 +7,7 @@ import msgpack
 
 class MsgpackTest(unittest.TestCase):
     def test_packb(self):
-        self.assertEqual("\x93\x01\x02\x03", msgpack.packb([1, 2, 3]))
+        self.assertEqual(b"\x93\x01\x02\x03", msgpack.packb([1, 2, 3]))
 
 
 if __name__ == "__main__":
