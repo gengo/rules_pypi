@@ -37,6 +37,7 @@ def _wheel_impl(ctx):
           "CFLAGS": " ".join(copts),
           "LDFLAGS": " ".join(_linker_options(ctx)),
       },
+      use_default_shell_env = True,
   )
 
 pypi_internal_wheel = rule(
