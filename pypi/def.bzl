@@ -35,7 +35,7 @@ py_library(
     srcs = glob(["lib/**/*.py"]),
     deps = {deps},
     srcs_version = {srcs_version},
-    data = glob(["data/**/*"]),
+    data = glob(["lib/**/*"]),
     imports = ["lib"],
     visibility = ["//visibility:public"],
 )
