@@ -22,6 +22,8 @@ def _wheel_impl(ctx):
   options += cpp.unfiltered_compiler_options(features)
   cc = "%s %s" % (cc, " ".join(options))
 
+  print(ctx.file.archive.path)
+  
   cmds = [
       " ".join([pip.path, "wheel", "--no-deps", "-w", outdir, ctx.file.archive.path]),
       "mv {outdir}/*.whl {out}".format(outdir = outdir, out = outwheel.path),
