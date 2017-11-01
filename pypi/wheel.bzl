@@ -24,7 +24,7 @@ def _wheel_impl(ctx):
   
   cmds = [
       " ".join([pip.path, "wheel", "-w", outdir, ctx.file.archive.path]),
-      "mv {outdir}/`ls -t {outdir}/*.whl|head -1` {out}".format(outdir = outdir, out = outwheel.path),
+      "mv `ls -t {outdir}/*.whl|head -1` {out}".format(outdir = outdir, out = outwheel.path),
   ]
   ctx.action(
       inputs = ctx.files.pip + ctx.files.archive + ctx.files._crosstool,
