@@ -26,10 +26,11 @@ def _wheel_impl(ctx):
       " ".join([pip.path, "wheel", "-w", outdir, ctx.file.archive.path]),
       "mv {outdir}/*.whl {out}".format(outdir = outdir, out = outwheel.path),
   ]
+  cmd = " ".join([pip.path, "wheel", "-w", outdir, ctx.file.archive.path])
   ctx.action(
       inputs = ctx.files.pip + ctx.files.archive + ctx.files._crosstool,
       outputs = [outwheel],
-      command = ["sh", "-c", " && ".join(cmds)],
+      command = ["sh", "-c", cmd],
       mnemonic = "PyWheel",
       env = {
           "CC": cc,
